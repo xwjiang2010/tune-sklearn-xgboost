@@ -1,0 +1,100 @@
+cluster_name: RAT-cluster
+min_workers: 20
+initial_workers: 20
+max_workers: 20
+autoscaling_mode: aggressive
+idle_timeout_minutes: 20
+
+provider:
+    type: aws
+    region: us-west-2
+    availability_zone: us-west-2a
+    cache_stopped_nodes: False
+    security_group:
+        GroupName: test_security_group_name
+        IpPermissions:
+              - FromPort: 10001
+                ToPort: 10001
+                IpProtocol: TCP
+                IpRanges:
+                    - CidrIp: 0.0.0.0/0
+              - FromPort: 10000
+                ToPort: 10000
+                IpProtocol: TCP
+                IpRanges:
+                    - CidrIp: 0.0.0.0/0
+
+available_node_types:
+    ray.head.default:
+        min_workers: 0
+        max_workers: 0
+        # resources: {"CPU": 0}
+        node_config:
+            InstanceType: c5.2xlarge
+            ImageId: latest_dlami
+            KeyName: xwjiang-test
+            BlockDeviceMappings:
+                - DeviceName: /dev/sda1
+                  Ebs:
+                      VolumeSize: 300
+
+    ray.worker.default:
+        min_workers: 4
+        max_workers: 4
+        resources: {}
+        node_config:
+            InstanceType: c5.2xlarge
+            ImageId: latest_dlami
+            KeyName: xwjiang-test
+            BlockDeviceMappings:
+                - DeviceName: /dev/sda1
+                  Ebs:
+                      VolumeSize: 300
+
+head_node_type: ray.head.default
+
+auth:
+    ssh_user: ubuntu
+    ssh_private_key: ~/Documents/aws_secrets/xwjiang-test.pem
+
+file_mounts: {
+    # /home/ubuntu/anaconda3/lib/python3.7/site-packages/ray/tune: /Users/xwjiang/ray/python/ray/tune,
+    # /home/ubuntu/Downloads/datasets/train.csv: /Users/xwjiang/Downloads/datasets/cleaned_train.csv
+}
+
+rsync_exclude:
+    - "**/.git"
+    - "**/.git/**"
+rsync_filter:
+    - ".gitignore"
+
+initialization_commands: []
+setup_commands: [
+    "pip install -U ray",
+    # "pip install https://s3-us-west-2.amazonaws.com/ray-wheels/master/64c25987f30c0107a9b0b0d46813a31fb7e1da12/ray-2.0.0.dev0-cp37-cp37m-manylinux2014_x86_64.whl",
+    "pip install 'ray[default]'",
+    "pip install 'ray[tune]'",
+    "pip install ipdb",
+    "pip install xgboost",
+    "pip install tune-sklearn",
+    "pip install hpbandster ConfigSpace",
+    "pip install xgboost_ray"
+    # "sudo apt-get update",
+    # "sudo apt-get install -y build-essential curl unzip psmisc",
+    # "pip install cython==0.29.0 pytest",
+    # "rm -rf my_ray_project",
+    # "git clone --branch client_closed https://github.com/xwjiang2010/ray.git my_ray_project",
+    # "my_ray_project/ci/travis/install-bazel.sh",
+    # "pip install -e my_ray_project/python --verbose",
+]
+
+
+head_start_ray_commands:
+    - ray stop
+    - RAY_BACKEND_LOG_LEVEL=debug ray start --head --num-cpus=1 --port=6379 --object-manager-port=8076 --autoscaling-config=~/ray_bootstrap_config.yaml --object-store-memory=1000000000
+
+# Command to start ray on worker nodes. You don't need to change this.
+worker_start_ray_commands:
+    - ray stop
+    # - RAY_BACKEND_LOG_LEVEL=debug ray start --address=$RAY_HEAD_IP:6379 --object-manager-port=8076 --object-store-memory=1000000000 
+    - ray start --address=$RAY_HEAD_IP:6379 --object-manager-port=8076 --object-store-memory=1000000000 
