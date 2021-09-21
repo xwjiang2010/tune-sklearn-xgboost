@@ -18,3 +18,7 @@ The demo will go like this:
 
 * plan to show the pre-captured [result](https://gist.github.com/xwjiang2010/c63ffdce0d4a7c8aa6fe2cf09e342bcb)
 * plan to run the best_model_ through test set and show the new result. Should improve the gini_score by around 5%.
+
+Before the demo, a cluster will be started beforehand.
+Port forwarding is set up through `ray attach cluster.yaml -p 9999`.
+Jupyter notebook is run on head node of the cluster through `jupyter lab --port=9999`
